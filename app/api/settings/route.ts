@@ -11,8 +11,8 @@ export async function POST(request: Request) {
       password?: string;
       lastfmApiKey?: string;
       requestWebhookUrl?: string;
-      artistScanLimit?: number;
       recentReleaseWindowDays?: number;
+      autoRefreshHours?: number;
     };
 
     if (!body.baseUrl?.trim() || !body.username?.trim()) {
@@ -25,8 +25,8 @@ export async function POST(request: Request) {
       password: body.password,
       lastfmApiKey: body.lastfmApiKey,
       requestWebhookUrl: body.requestWebhookUrl,
-      artistScanLimit: body.artistScanLimit,
-      recentReleaseWindowDays: body.recentReleaseWindowDays
+      recentReleaseWindowDays: body.recentReleaseWindowDays,
+      autoRefreshHours: body.autoRefreshHours
     });
 
     revalidatePath("/");

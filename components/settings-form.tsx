@@ -15,9 +15,11 @@ export function SettingsForm({ config }: { config: DisplayConfig | null }) {
   const [password, setPassword] = useState("");
   const [lastfmApiKey, setLastfmApiKey] = useState("");
   const [requestWebhookUrl, setRequestWebhookUrl] = useState(config?.integrations.requestWebhookUrl || "");
-  const [artistScanLimit, setArtistScanLimit] = useState(String(config?.preferences.artistScanLimit || 12));
   const [recentReleaseWindowDays, setRecentReleaseWindowDays] = useState(
     String(config?.preferences.recentReleaseWindowDays || 45)
+  );
+  const [autoRefreshHours, setAutoRefreshHours] = useState(
+    String(config?.preferences.autoRefreshHours || 12)
   );
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -36,8 +38,8 @@ export function SettingsForm({ config }: { config: DisplayConfig | null }) {
           password,
           lastfmApiKey,
           requestWebhookUrl,
-          artistScanLimit: Number(artistScanLimit),
-          recentReleaseWindowDays: Number(recentReleaseWindowDays)
+          recentReleaseWindowDays: Number(recentReleaseWindowDays),
+          autoRefreshHours: Number(autoRefreshHours)
         })
       });
 
@@ -116,18 +118,6 @@ export function SettingsForm({ config }: { config: DisplayConfig | null }) {
 
       <div className="form-grid two-up">
         <label className="field">
-          <span>Artist scan limit</span>
-          <input
-            max={30}
-            min={3}
-            name="artistScanLimit"
-            onChange={(event) => setArtistScanLimit(event.target.value)}
-            type="number"
-            value={artistScanLimit}
-          />
-        </label>
-
-        <label className="field">
           <span>Recent release window (days)</span>
           <input
             max={180}
@@ -136,6 +126,18 @@ export function SettingsForm({ config }: { config: DisplayConfig | null }) {
             onChange={(event) => setRecentReleaseWindowDays(event.target.value)}
             type="number"
             value={recentReleaseWindowDays}
+          />
+        </label>
+
+        <label className="field">
+          <span>Auto refresh every (hours)</span>
+          <input
+            max={168}
+            min={1}
+            name="autoRefreshHours"
+            onChange={(event) => setAutoRefreshHours(event.target.value)}
+            type="number"
+            value={autoRefreshHours}
           />
         </label>
       </div>

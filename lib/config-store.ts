@@ -14,8 +14,8 @@ const DEFAULT_CONFIG: AppConfig = {
     requestWebhookUrl: ""
   },
   preferences: {
-    artistScanLimit: 12,
-    recentReleaseWindowDays: 45
+    recentReleaseWindowDays: 45,
+    autoRefreshHours: 12
   }
 };
 
@@ -63,8 +63,8 @@ export async function saveConfig(input: {
   password?: string;
   lastfmApiKey?: string;
   requestWebhookUrl?: string;
-  artistScanLimit?: number;
   recentReleaseWindowDays?: number;
+  autoRefreshHours?: number;
 }): Promise<AppConfig> {
   const current = await loadConfig();
 
@@ -80,11 +80,11 @@ export async function saveConfig(input: {
         input.requestWebhookUrl?.trim() || current.integrations.requestWebhookUrl || ""
     },
     preferences: {
-      artistScanLimit: Math.max(3, Math.min(30, input.artistScanLimit || current.preferences.artistScanLimit)),
       recentReleaseWindowDays: Math.max(
         7,
         Math.min(180, input.recentReleaseWindowDays || current.preferences.recentReleaseWindowDays)
-      )
+      ),
+      autoRefreshHours: Math.max(1, Math.min(168, input.autoRefreshHours || current.preferences.autoRefreshHours))
     }
   };
 

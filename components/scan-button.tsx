@@ -13,7 +13,13 @@ export function ScanButton({ disabled }: { disabled: boolean }) {
 
     startTransition(async () => {
       const response = await fetch("/api/scan", {
-        method: "POST"
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          background: true
+        })
       });
       const payload = (await response.json()) as { error?: string };
 
@@ -22,7 +28,7 @@ export function ScanButton({ disabled }: { disabled: boolean }) {
         return;
       }
 
-      setStatus("Scan complete.");
+      setStatus("Background scan started.");
       router.refresh();
     });
   }
@@ -30,7 +36,7 @@ export function ScanButton({ disabled }: { disabled: boolean }) {
   return (
     <div>
       <button className="button" disabled={disabled || pending} onClick={runScan} type="button">
-        {pending ? "Scanning..." : "Run library scan"}
+        {pending ? "Starting..." : "Rescan library"}
       </button>
       <div className="status-line">{status}</div>
     </div>

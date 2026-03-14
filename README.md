@@ -5,12 +5,13 @@ NaviSeerr is a self-hosted discovery and collection-completion companion for Nav
 ## What the MVP does
 
 - Connects to a Navidrome server with Subsonic-compatible auth
-- Scans the library and builds artist + album inventory
+- Scans the full library and builds artist + album inventory
 - Flags missing release groups for artists already in the collection
 - Surfaces recent missing releases from artists you already follow
 - Suggests similar artists using Navidrome similarity data, then Last.fm if configured
 - Lets you save albums and artists to a local wishlist
 - Optionally sends wishlist items to a custom webhook for the rest of your stack
+- Refreshes itself automatically on a schedule and updates the dashboard in the background
 
 ## Stack
 
@@ -73,7 +74,8 @@ Mount `./data` to `/app/data` so you keep:
 
 ## Notes on the current scan model
 
-- NaviSeerr scans the top artists by album count, not every artist in one pass. This keeps MusicBrainz lookups practical and avoids slow scans on large libraries.
+- NaviSeerr always scans the full Navidrome library for inventory.
+- External artist metadata is cached per artist and refreshed in the background, which keeps rescans practical even on larger libraries.
 - Missing discography is based on MusicBrainz release groups, which is strong for albums, EPs, compilations, and live releases, but not a perfect edition-level match.
 - Recent releases are based on the configurable release window in settings.
 - Similar artists first try Navidrome's own `getArtistInfo2` data, then fall back to Last.fm if you supply an API key.

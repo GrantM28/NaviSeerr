@@ -10,8 +10,8 @@ export type IntegrationsConfig = {
 };
 
 export type PreferencesConfig = {
-  artistScanLimit: number;
   recentReleaseWindowDays: number;
+  autoRefreshHours: number;
 };
 
 export type AppConfig = {
@@ -103,7 +103,7 @@ export type ScanReport = {
   stats: {
     totalArtists: number;
     totalAlbums: number;
-    scannedArtists: number;
+    catalogCoverageArtists: number;
     missingReleases: number;
     newReleases: number;
     wishlistCount: number;
@@ -122,6 +122,20 @@ export type ScanReport = {
   notes: string[];
 };
 
+export type SimilarArtistCacheItem = {
+  name: string;
+  source: "navidrome" | "lastfm";
+};
+
+export type ArtistMetadataCacheEntry = {
+  artistName: string;
+  fetchedAt: string;
+  catalog: CatalogRelease[];
+  similarArtists: SimilarArtistCacheItem[];
+};
+
+export type ArtistMetadataCache = Record<string, ArtistMetadataCacheEntry>;
+
 export type WishlistItem = {
   id: string;
   artist: string;
@@ -139,4 +153,17 @@ export type StoredState = {
   hasConfig: boolean;
   report: ScanReport | null;
   wishlist: WishlistItem[];
+  scanState: ScanState;
+  shouldAutoScan: boolean;
+};
+
+export type ScanState = {
+  isScanning: boolean;
+  startedAt?: string;
+  completedAt?: string;
+  processedArtists: number;
+  totalArtists: number;
+  phase: "idle" | "library" | "metadata" | "finalizing";
+  currentArtist?: string;
+  message: string;
 };

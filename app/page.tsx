@@ -1,3 +1,4 @@
+import { AutoScanBanner } from "@/components/auto-scan-banner";
 import { ScanButton } from "@/components/scan-button";
 import { SettingsForm } from "@/components/settings-form";
 import { WishlistActionButton } from "@/components/wishlist-action-button";
@@ -21,26 +22,11 @@ function EmptyReport() {
   return (
     <section className="panel hero-card">
       <div className="eyebrow">Collection intelligence for Navidrome</div>
-      <h1>NaviSeerr turns your library into a backlog of what to collect next.</h1>
+      <h1>NaviSeerr turns your library into a browseable backlog.</h1>
       <p className="lede">
-        Save your Navidrome server, run a scan, and this dashboard will surface missing releases,
-        recent drops from artists you already own, and a wishlist you can push into the rest of
-        your stack.
+        Connect Navidrome once, then NaviSeerr keeps scanning the full library in the background so
+        your rows stay current with missing releases, recent drops, and artists worth queuing next.
       </p>
-      <div className="hero-grid">
-        <article className="mini-panel">
-          <h2>Missing discography</h2>
-          <p>See which artists are incomplete and which albums, EPs, or live releases are absent.</p>
-        </article>
-        <article className="mini-panel">
-          <h2>New releases</h2>
-          <p>Catch recent release groups from the artists already living in your Navidrome library.</p>
-        </article>
-        <article className="mini-panel">
-          <h2>Recommendations</h2>
-          <p>Use Navidrome similarity data or Last.fm to build a smart wanted queue instead of a random list.</p>
-        </article>
-      </div>
     </section>
   );
 }
@@ -52,282 +38,279 @@ export default async function Home() {
   return (
     <main className="app-shell">
       <div className="backdrop" />
-      <section className="topbar">
+      <section className="topbar topbar-compact">
         <div>
           <div className="eyebrow">Self-hosted music companion</div>
           <h1 className="site-title">NaviSeerr</h1>
           <p className="lede compact">
-            Find the releases you are missing, track what just dropped, and turn discovery into a
-            usable wanted queue.
+            Jellyseerr-style browsing for your Navidrome collection, with whole-library sync and a
+            wanted queue.
           </p>
         </div>
-        <div className="topbar-actions">
-          <ScanButton disabled={!state.hasConfig} />
-        </div>
+        <ScanButton disabled={!state.hasConfig} />
       </section>
 
-      <section className="layout-grid">
-        <div className="main-column">
-          {report ? (
-            <>
-              <section className="stats-grid">
-                <article className="stat-card">
-                  <span>Total artists</span>
-                  <strong>{report.stats.totalArtists}</strong>
-                </article>
-                <article className="stat-card">
-                  <span>Total albums</span>
-                  <strong>{report.stats.totalAlbums}</strong>
-                </article>
-                <article className="stat-card">
-                  <span>Missing releases</span>
-                  <strong>{report.stats.missingReleases}</strong>
-                </article>
-                <article className="stat-card">
-                  <span>Recent drops</span>
-                  <strong>{report.stats.newReleases}</strong>
-                </article>
-              </section>
+      <div className="page-stack">
+        <AutoScanBanner initialState={state.scanState} shouldAutoScan={state.shouldAutoScan} />
 
-              <section className="panel section-panel">
-                <div className="section-heading">
-                  <div>
-                    <div className="eyebrow">Dashboard</div>
-                    <h2>Home screen</h2>
-                  </div>
-                  <p>Last scan: {formatDate(report.generatedAt)}</p>
-                </div>
-                <div className="section-columns">
-                  <div>
-                    <h3>Top genres</h3>
-                    <div className="pill-row">
-                      {report.overview.topGenres.length ? (
-                        report.overview.topGenres.map((genre) => (
-                          <span className="pill" key={genre.name}>
-                            {genre.name} • {genre.count}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="muted">No genre data was returned by Navidrome.</span>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h3>Top artists by album count</h3>
-                    <ul className="simple-list">
-                      {report.overview.topArtists.map((artist) => (
-                        <li key={artist.name}>
-                          <span>{artist.name}</span>
-                          <strong>{artist.albumCount}</strong>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </section>
+        <section className="hero-layout">
+          <article className="panel hero-card">
+            <div className="eyebrow">Overview</div>
+            <h2 className="section-title">Your next listens, pickups, and gaps at a glance.</h2>
+            <div className="stats-grid wide">
+              <article className="stat-card">
+                <span>Artists</span>
+                <strong>{report?.stats.totalArtists ?? 0}</strong>
+              </article>
+              <article className="stat-card">
+                <span>Albums</span>
+                <strong>{report?.stats.totalAlbums ?? 0}</strong>
+              </article>
+              <article className="stat-card">
+                <span>Metadata coverage</span>
+                <strong>{report?.stats.catalogCoverageArtists ?? 0}</strong>
+              </article>
+              <article className="stat-card">
+                <span>Wishlist</span>
+                <strong>{report?.stats.wishlistCount ?? state.wishlist.length}</strong>
+              </article>
+            </div>
+            {report ? (
+              <p className="lede compact">
+                Last report generated {formatDate(report.generatedAt)}. Auto refresh runs every{" "}
+                {state.config?.preferences.autoRefreshHours || 12} hours.
+              </p>
+            ) : null}
+          </article>
 
-              <section className="panel section-panel">
-                <div className="section-heading">
-                  <div>
-                    <div className="eyebrow">Missing discography</div>
-                    <h2>Collection completion</h2>
-                  </div>
-                  <p>Scanned top {report.stats.scannedArtists} artists by album depth.</p>
-                </div>
-                <div className="card-stack">
-                  {report.missingDiscography.length ? (
-                    report.missingDiscography.map((item) => (
-                      <article className="discovery-card" key={item.artist}>
-                        <header>
-                          <div>
-                            <h3>{item.artist}</h3>
-                            <p>
-                              You have {item.ownedCount} of {item.knownCount} release groups in the sampled
-                              discography.
-                            </p>
-                          </div>
-                        </header>
-                        <div className="tag-cloud">
-                          {item.missing.map((release) => (
-                            <div className="release-chip" key={`${item.artist}-${release.id}`}>
-                              <div>
-                                <strong>{release.title}</strong>
-                                <span>
-                                  {release.type}
-                                  {release.year ? ` • ${release.year}` : ""}
-                                </span>
-                              </div>
-                              <WishlistActionButton
-                                artist={item.artist}
-                                title={release.title}
-                                type="album"
-                                reason={`Missing ${release.type.toLowerCase()} from ${item.artist}`}
-                                source="missing-discography"
-                                label="Want this"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </article>
-                    ))
-                  ) : (
-                    <p className="muted">No obvious missing release groups surfaced in this scan window.</p>
-                  )}
-                </div>
-              </section>
-
-              <section className="dual-grid">
-                <article className="panel section-panel">
-                  <div className="section-heading">
-                    <div>
-                      <div className="eyebrow">Fresh drops</div>
-                      <h2>New releases</h2>
-                    </div>
-                    <p>Window: {state.config?.preferences.recentReleaseWindowDays || 45} days</p>
-                  </div>
-                  <div className="card-stack">
-                    {report.newReleases.length ? (
-                      report.newReleases.map((release) => (
-                        <article className="mini-panel release-row" key={`${release.artist}-${release.title}`}>
-                          <div>
-                            <strong>{release.title}</strong>
-                            <p>
-                              {release.artist} • {release.type} • {formatDate(release.date)}
-                            </p>
-                          </div>
-                          <WishlistActionButton
-                            artist={release.artist}
-                            title={release.title}
-                            type="album"
-                            reason={`Recent release from ${release.artist}`}
-                            source="new-releases"
-                            label="Save"
-                          />
-                        </article>
-                      ))
-                    ) : (
-                      <p className="muted">No recent missing releases were found for the sampled artists.</p>
-                    )}
-                  </div>
-                </article>
-
-                <article className="panel section-panel">
-                  <div className="section-heading">
-                    <div>
-                      <div className="eyebrow">Because you already listen to...</div>
-                      <h2>Similar artists</h2>
-                    </div>
-                    <p>Powered by Navidrome similarity data, then Last.fm if configured.</p>
-                  </div>
-                  <div className="card-stack">
-                    {report.similarArtists.length ? (
-                      report.similarArtists.map((item) => (
-                        <article className="mini-panel release-row" key={`${item.seedArtist}-${item.artist}`}>
-                          <div>
-                            <strong>{item.artist}</strong>
-                            <p>
-                              Seeded from {item.seedArtist} • {item.source}
-                            </p>
-                          </div>
-                          <WishlistActionButton
-                            artist={item.artist}
-                            title={item.artist}
-                            type="artist"
-                            reason={`Similar to ${item.seedArtist}`}
-                            source={item.source}
-                            label="Queue"
-                          />
-                        </article>
-                      ))
-                    ) : (
-                      <p className="muted">
-                        Add a Last.fm API key if Navidrome is not returning similarity data yet.
-                      </p>
-                    )}
-                  </div>
-                </article>
-              </section>
-
-              <section className="dual-grid">
-                <article className="panel section-panel">
-                  <div className="section-heading">
-                    <div>
-                      <div className="eyebrow">Smart gaps</div>
-                      <h2>Library health</h2>
-                    </div>
-                  </div>
-                  <div className="card-stack">
-                    {report.collectionGaps.map((gap) => (
-                      <article className="mini-panel" key={gap.title}>
-                        <strong>{gap.title}</strong>
-                        <p>{gap.detail}</p>
-                      </article>
-                    ))}
-                  </div>
-                </article>
-
-                <article className="panel section-panel">
-                  <div className="section-heading">
-                    <div>
-                      <div className="eyebrow">Scan notes</div>
-                      <h2>What this pass looked at</h2>
-                    </div>
-                  </div>
-                  <ul className="notes-list">
-                    {report.notes.map((note) => (
-                      <li key={note}>{note}</li>
-                    ))}
-                  </ul>
-                </article>
-              </section>
-            </>
-          ) : (
-            <EmptyReport />
-          )}
-        </div>
-
-        <aside className="side-column">
-          <section className="panel side-panel">
+          <article className="panel setup-card">
             <div className="section-heading">
               <div>
-                <div className="eyebrow">Setup</div>
-                <h2>Connections</h2>
+                <div className="eyebrow">Connections</div>
+                <h2 className="section-title small">Settings</h2>
               </div>
             </div>
             <SettingsForm config={state.config} />
-          </section>
+          </article>
+        </section>
 
-          <section className="panel side-panel">
-            <div className="section-heading">
-              <div>
-                <div className="eyebrow">Wanted queue</div>
-                <h2>Wishlist</h2>
+        {!report ? <EmptyReport /> : null}
+
+        {report ? (
+          <>
+            <section className="row-section">
+              <div className="row-header">
+                <div>
+                  <div className="eyebrow">Missing discography</div>
+                  <h2 className="section-title small">Complete your artists</h2>
+                </div>
+                <p>{report.stats.missingReleases} missing releases surfaced across the library.</p>
               </div>
-              <p>{state.wishlist.length} saved items</p>
-            </div>
-            <div className="card-stack">
-              {state.wishlist.length ? (
-                state.wishlist.map((item) => (
-                  <article className="mini-panel" key={item.id}>
-                    <strong>{item.title}</strong>
-                    <p>
-                      {item.artist} • {item.reason}
-                    </p>
-                    <small>
-                      {item.status === "sent" && item.lastSentAt
-                        ? `Sent ${formatDate(item.lastSentAt)}`
-                        : `Saved ${formatDate(item.createdAt)}`}
-                    </small>
-                    <WishlistControls itemId={item.id} canSend={Boolean(state.config?.integrations.requestWebhookUrl)} />
+              <div className="carousel-row">
+                {report.missingDiscography.length ? (
+                  report.missingDiscography.map((item) => (
+                    <article className="carousel-card large" key={item.artist}>
+                      <div className="card-kicker">{item.artist}</div>
+                      <h3>
+                        {item.ownedCount} of {item.knownCount} release groups owned
+                      </h3>
+                      <div className="mini-stack">
+                        {item.missing.map((release) => (
+                          <div className="release-pill" key={`${item.artist}-${release.id}`}>
+                            <div>
+                              <strong>{release.title}</strong>
+                              <span>
+                                {release.type}
+                                {release.year ? ` • ${release.year}` : ""}
+                              </span>
+                            </div>
+                            <WishlistActionButton
+                              artist={item.artist}
+                              title={release.title}
+                              type="album"
+                              reason={`Missing ${release.type.toLowerCase()} from ${item.artist}`}
+                              source="missing-discography"
+                              label="Want"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <article className="carousel-card">
+                    <h3>No missing releases detected</h3>
+                    <p>Once metadata coverage grows, this row will fill itself in automatically.</p>
                   </article>
-                ))
-              ) : (
-                <p className="muted">Albums and artists you save from the dashboard will land here.</p>
-              )}
-            </div>
-          </section>
-        </aside>
-      </section>
+                )}
+              </div>
+            </section>
+
+            <section className="row-section">
+              <div className="row-header">
+                <div>
+                  <div className="eyebrow">New releases</div>
+                  <h2 className="section-title small">Fresh drops from artists you own</h2>
+                </div>
+                <p>{state.config?.preferences.recentReleaseWindowDays || 45}-day window</p>
+              </div>
+              <div className="carousel-row">
+                {report.newReleases.length ? (
+                  report.newReleases.map((release) => (
+                    <article className="carousel-card" key={`${release.artist}-${release.title}`}>
+                      <div className="card-kicker">{release.artist}</div>
+                      <h3>{release.title}</h3>
+                      <p>
+                        {release.type} • {formatDate(release.date)}
+                      </p>
+                      <WishlistActionButton
+                        artist={release.artist}
+                        title={release.title}
+                        type="album"
+                        reason={`Recent release from ${release.artist}`}
+                        source="new-releases"
+                        label="Save"
+                      />
+                    </article>
+                  ))
+                ) : (
+                  <article className="carousel-card">
+                    <h3>No recent gaps right now</h3>
+                    <p>This row fills with new releases from artists already in the library.</p>
+                  </article>
+                )}
+              </div>
+            </section>
+
+            <section className="row-section">
+              <div className="row-header">
+                <div>
+                  <div className="eyebrow">Similar artists</div>
+                  <h2 className="section-title small">Because you already listen to...</h2>
+                </div>
+                <p>Navidrome first, Last.fm fallback if configured.</p>
+              </div>
+              <div className="carousel-row">
+                {report.similarArtists.length ? (
+                  report.similarArtists.map((item) => (
+                    <article className="carousel-card" key={`${item.seedArtist}-${item.artist}`}>
+                      <div className="card-kicker">{item.seedArtist}</div>
+                      <h3>{item.artist}</h3>
+                      <p>{item.reason}</p>
+                      <WishlistActionButton
+                        artist={item.artist}
+                        title={item.artist}
+                        type="artist"
+                        reason={`Similar to ${item.seedArtist}`}
+                        source={item.source}
+                        label="Queue"
+                      />
+                    </article>
+                  ))
+                ) : (
+                  <article className="carousel-card">
+                    <h3>No recommendations yet</h3>
+                    <p>Add a Last.fm key if Navidrome isn’t returning enough similarity data.</p>
+                  </article>
+                )}
+              </div>
+            </section>
+
+            <section className="row-section">
+              <div className="row-header">
+                <div>
+                  <div className="eyebrow">Library health</div>
+                  <h2 className="section-title small">Smart collection gaps</h2>
+                </div>
+              </div>
+              <div className="carousel-row">
+                {report.collectionGaps.map((gap) => (
+                  <article className="carousel-card" key={gap.title}>
+                    <div className="card-kicker">Gap</div>
+                    <h3>{gap.title}</h3>
+                    <p>{gap.detail}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <section className="row-section">
+              <div className="row-header">
+                <div>
+                  <div className="eyebrow">Wanted queue</div>
+                  <h2 className="section-title small">Saved for import</h2>
+                </div>
+                <p>{state.wishlist.length} queued items</p>
+              </div>
+              <div className="carousel-row">
+                {state.wishlist.length ? (
+                  state.wishlist.map((item) => (
+                    <article className="carousel-card" key={item.id}>
+                      <div className="card-kicker">{item.artist}</div>
+                      <h3>{item.title}</h3>
+                      <p>{item.reason}</p>
+                      <small>
+                        {item.status === "sent" && item.lastSentAt
+                          ? `Sent ${formatDate(item.lastSentAt)}`
+                          : `Saved ${formatDate(item.createdAt)}`}
+                      </small>
+                      <WishlistControls
+                        itemId={item.id}
+                        canSend={Boolean(state.config?.integrations.requestWebhookUrl)}
+                      />
+                    </article>
+                  ))
+                ) : (
+                  <article className="carousel-card">
+                    <h3>Your wishlist is empty</h3>
+                    <p>Save albums or artists from any row and they’ll show up here.</p>
+                  </article>
+                )}
+              </div>
+            </section>
+
+            <section className="row-section">
+              <div className="row-header">
+                <div>
+                  <div className="eyebrow">Top of collection</div>
+                  <h2 className="section-title small">Genres and heavy hitters</h2>
+                </div>
+              </div>
+              <div className="carousel-row">
+                <article className="carousel-card">
+                  <div className="card-kicker">Genres</div>
+                  <div className="chip-cloud">
+                    {report.overview.topGenres.map((genre) => (
+                      <span className="pill" key={genre.name}>
+                        {genre.name} • {genre.count}
+                      </span>
+                    ))}
+                  </div>
+                </article>
+                <article className="carousel-card large" key="top-artists">
+                  <div className="card-kicker">Top artists</div>
+                  <div className="mini-stack">
+                    {report.overview.topArtists.map((artist) => (
+                      <div className="list-row" key={artist.name}>
+                        <span>{artist.name}</span>
+                        <strong>{artist.albumCount}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+                <article className="carousel-card large" key="notes">
+                  <div className="card-kicker">Notes</div>
+                  <div className="mini-stack">
+                    {report.notes.map((note) => (
+                      <p key={note}>{note}</p>
+                    ))}
+                  </div>
+                </article>
+              </div>
+            </section>
+          </>
+        ) : null}
+      </div>
     </main>
   );
 }
