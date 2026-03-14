@@ -153,6 +153,8 @@ export class NavidromeClient {
           artist: string;
           artistId?: string;
           album?: string;
+          albumId?: string;
+          parent?: string;
           starred?: string;
           coverArt?: string;
         }>;
@@ -165,14 +167,18 @@ export class NavidromeClient {
       artist: song.artist,
       artistId: song.artistId,
       album: song.album,
+      albumId: song.albumId || song.parent,
       starred: song.starred,
-      coverArtId: song.coverArt || song.id
+      coverArtId: song.coverArt || song.albumId || song.parent || song.id
     }));
   }
 
   async fetchCoverArt(id: string): Promise<Response> {
-    const url = `${this.baseUrl}/rest/getCoverArt.view?${this.buildQuery({ id }).toString()}`;
+    const url = `${this.baseUrl}/rest/getCoverArt.view?${this.buildQuery({ id, size: 600 }).toString()}`;
     const response = await fetch(url, {
+      headers: {
+        Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"
+      },
       cache: "no-store"
     });
 

@@ -49,6 +49,7 @@ export type LibraryTrack = {
   artist: string;
   artistId?: string;
   album?: string;
+  albumId?: string;
   starred?: string;
   coverArtId?: string;
 };

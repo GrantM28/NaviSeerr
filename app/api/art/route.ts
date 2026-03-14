@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { loadConfig } from "@/lib/config-store";
 import { NavidromeClient } from "@/lib/navidrome";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -21,13 +23,11 @@ export async function GET(request: Request) {
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "public, max-age=3600"
+        "Cache-Control": "public, max-age=3600",
+        "Content-Disposition": "inline"
       }
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Could not fetch art." },
-      { status: 500 }
-    );
+    return new NextResponse(null, { status: 404 });
   }
 }
