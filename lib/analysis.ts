@@ -1,12 +1,15 @@
 import type {
   ArtistMetadataCache,
+  ArtistTopTrackItem,
   CatalogRelease,
   CollectionGap,
   LibraryAlbum,
   LibraryArtist,
   LibraryInventory,
+  LibraryTrack,
   MissingDiscographyItem,
   NewReleaseItem,
+  RecommendedSongItem,
   ScanReport,
   SimilarArtistItem,
   WishlistItem
@@ -94,50 +97,134 @@ function isRecentRelease(date: string | undefined, recentWindowDays: number): bo
 
 function buildCollectionGaps(
   inventory: LibraryInventory,
-  missing: MissingDiscographyItem[],
-  newReleases: NewReleaseItem[],
+  similarSongs: RecommendedSongItem[],
+  similarArtists: SimilarArtistItem[],
   wishlist: WishlistItem[]
 ): CollectionGap[] {
   const gaps: CollectionGap[] = [];
   const oneAlbumArtists = inventory.artists.filter((artist) => artist.albumCount === 1);
 
-  if (missing.length) {
-    const totalMissing = missing.reduce((count, item) => count + item.missing.length, 0);
+  if (similarSongs.length < 12) {
     gaps.push({
-      title: "Completion pass waiting",
-      detail: `${missing.length} artists are incomplete across the full library, with ${totalMissing} missing releases queued for review.`
+      title: "Recommendation depth can grow",
+      detail: "Star a few songs in Navidrome and add a Last.fm API key to unlock stronger track-to-track recommendations."
     });
   }
 
-  if (oneAlbumArtists.length >= 5) {
+  if (oneAlbumArtists.length >= 8) {
     gaps.push({
-      title: "One-album footholds",
-      detail: `${oneAlbumArtists.length} artists only have one album in your library, which is a strong signal for essential-album recommendations.`
+      title: "Lots of artists with only one album",
+      detail: `${oneAlbumArtists.length} artists are just footholds in your library, which is a good place to surface deeper track picks next.`
     });
   }
 
-  if (newReleases.length) {
+  if (!wishlist.length && (similarSongs.length || similarArtists.length)) {
     gaps.push({
-      title: "Fresh releases not in hand",
-      detail: `${newReleases.length} recent releases from artists you already collect are still missing from the library.`
-    });
-  }
-
-  if (!wishlist.length && (missing.length || newReleases.length)) {
-    gaps.push({
-      title: "No acquisition queue yet",
-      detail: "Start saving albums and artists to the wishlist so the dashboard can feed the rest of your stack."
+      title: "Discovery is not feeding your queue yet",
+      detail: "Save songs or artists from the recommendation rows so discovery turns into a real wanted list."
     });
   }
 
   if (!gaps.length) {
     gaps.push({
-      title: "Healthy baseline",
-      detail: "No major collection gaps surfaced right now, so discovery rows can do more of the work."
+      title: "Recommendation coverage looks healthy",
+      detail: "The current library has enough metadata to keep the discovery rows populated."
     });
   }
 
   return gaps;
+}
+
+function buildSimilarArtists(
+  inventory: LibraryInventory,
+  cache: ArtistMetadataCache
+): SimilarArtistItem[] {
+  const ownedArtistNames = inventory.artists.map((artist) => artist.name);
+  const similarArtists: SimilarArtistItem[] = [];
+
+  for (const artist of inventory.artists.slice(0, 18)) {
+    const entry = cache[normalizeText(artist.name)] || null;
+
+    for (const candidate of entry?.similarArtists || []) {
+      if (ownedArtistNames.some((owned) => sameArtist(owned, candidate.name))) {
+        continue;
+      }
+
+      const duplicate = similarArtists.some(
+        (existing) => sameArtist(existing.artist, candidate.name) && sameArtist(existing.seedArtist, artist.name)
+      );
+
+      if (!duplicate) {
+        similarArtists.push({
+          seedArtist: artist.name,
+          artist: candidate.name,
+          source: candidate.source,
+          reason:
+            candidate.source === "navidrome"
+              ? `If you like ${artist.name}, Navidrome points toward ${candidate.name}.`
+              : `Last.fm listeners who play ${artist.name} also drift toward ${candidate.name}.`
+        });
+      }
+    }
+  }
+
+  return similarArtists.slice(0, 30);
+}
+
+function buildArtistTopTracks(
+  inventory: LibraryInventory,
+  cache: ArtistMetadataCache
+): ArtistTopTrackItem[] {
+  const picks: ArtistTopTrackItem[] = [];
+
+  for (const artist of inventory.artists.slice(0, 16)) {
+    const entry = cache[normalizeText(artist.name)] || null;
+
+    for (const track of entry?.topTracks || []) {
+      const duplicate = picks.some(
+        (existing) => sameArtist(existing.artist, track.artist) && normalizeText(existing.title) === normalizeText(track.title)
+      );
+
+      if (!duplicate) {
+        picks.push({
+          artist: track.artist,
+          title: track.title,
+          playcount: track.playcount,
+          listeners: track.listeners,
+          source: "lastfm"
+        });
+      }
+    }
+  }
+
+  return picks.slice(0, 28);
+}
+
+function buildSimilarSongs(
+  starredSongs: LibraryTrack[],
+  similarSongSeeds: RecommendedSongItem[]
+): RecommendedSongItem[] {
+  const seeds = starredSongs.slice(0, 8);
+  const deduped: RecommendedSongItem[] = [];
+
+  for (const item of similarSongSeeds) {
+    const duplicate = deduped.some(
+      (existing) =>
+        sameArtist(existing.artist, item.artist) && normalizeText(existing.title) === normalizeText(item.title)
+    );
+
+    const isAlreadyStarred = seeds.some(
+      (seed) => sameArtist(seed.artist, item.artist) && normalizeText(seed.title) === normalizeText(item.title)
+    );
+
+    if (!duplicate && !isAlreadyStarred) {
+      deduped.push(item);
+    }
+  }
+
+  return deduped
+    .sort((left, right) => (right.matchScore || 0) - (left.matchScore || 0))
+    .slice(0, 30);
 }
 
 export function buildScanReport(params: {
@@ -145,12 +232,12 @@ export function buildScanReport(params: {
   cache: ArtistMetadataCache;
   wishlist: WishlistItem[];
   recentReleaseWindowDays: number;
+  starredSongs: LibraryTrack[];
+  similarSongSeeds: RecommendedSongItem[];
 }): ScanReport {
-  const { inventory, cache, wishlist, recentReleaseWindowDays } = params;
-  const ownedArtistNames = inventory.artists.map((artist) => artist.name);
+  const { inventory, cache, wishlist, recentReleaseWindowDays, starredSongs, similarSongSeeds } = params;
   const missingDiscography: MissingDiscographyItem[] = [];
   const newReleases: NewReleaseItem[] = [];
-  const similarArtists: SimilarArtistItem[] = [];
   let catalogCoverageArtists = 0;
 
   for (const artist of inventory.artists) {
@@ -171,7 +258,7 @@ export function buildScanReport(params: {
           ownedCount: ownedAlbums.length,
           knownCount: catalog.length,
           ownedAlbums,
-          missing: missing.slice(0, 6)
+          missing: missing.slice(0, 4)
         });
       }
 
@@ -187,28 +274,6 @@ export function buildScanReport(params: {
         }
       }
     }
-
-    for (const candidate of entry?.similarArtists || []) {
-      if (ownedArtistNames.some((owned) => sameArtist(owned, candidate.name))) {
-        continue;
-      }
-
-      const duplicate = similarArtists.some(
-        (existing) => sameArtist(existing.artist, candidate.name) && sameArtist(existing.seedArtist, artist.name)
-      );
-
-      if (!duplicate) {
-        similarArtists.push({
-          seedArtist: artist.name,
-          artist: candidate.name,
-          source: candidate.source,
-          reason:
-            candidate.source === "navidrome"
-              ? `Navidrome linked ${candidate.name} to ${artist.name}.`
-              : `Last.fm linked ${candidate.name} to ${artist.name}.`
-        });
-      }
-    }
   }
 
   const dedupedNewReleases = newReleases.filter(
@@ -219,17 +284,16 @@ export function buildScanReport(params: {
       )
   );
 
-  const sortedMissing = missingDiscography
-    .sort((left, right) => right.missing.length - left.missing.length || right.knownCount - left.knownCount)
-    .slice(0, 24);
-  const totalMissingReleaseCount = missingDiscography.reduce((count, item) => count + item.missing.length, 0);
-
-  const sortedSimilar = similarArtists.slice(0, 36);
+  const similarArtists = buildSimilarArtists(inventory, cache);
+  const artistTopTracks = buildArtistTopTracks(inventory, cache);
+  const similarSongs = buildSimilarSongs(starredSongs, similarSongSeeds);
 
   const notes = [
     `Scanned the full Navidrome library: ${inventory.artists.length} artists and ${inventory.albums.length} albums.`,
-    `${catalogCoverageArtists} artists currently have cached external metadata powering completion and release tracking.`,
-    "Metadata refresh runs in the background and the dashboard updates itself as cached artist data gets refreshed."
+    `${catalogCoverageArtists} artists currently have cached external metadata.`,
+    starredSongs.length
+      ? `Using ${Math.min(starredSongs.length, 8)} starred songs as taste seeds for similar-song recommendations.`
+      : "No starred songs found in Navidrome yet, so similar-song rows will stay lighter until you seed a few favorites."
   ];
 
   return {
@@ -238,7 +302,7 @@ export function buildScanReport(params: {
       totalArtists: inventory.artists.length,
       totalAlbums: inventory.albums.length,
       catalogCoverageArtists,
-      missingReleases: totalMissingReleaseCount,
+      missingReleases: missingDiscography.reduce((count, item) => count + item.missing.length, 0),
       newReleases: dedupedNewReleases.length,
       wishlistCount: wishlist.length
     },
@@ -249,12 +313,17 @@ export function buildScanReport(params: {
         albumCount: artist.albumCount
       }))
     },
-    missingDiscography: sortedMissing,
+    missingDiscography: missingDiscography
+      .sort((left, right) => right.missing.length - left.missing.length)
+      .slice(0, 10),
     newReleases: dedupedNewReleases
       .sort((left, right) => right.date.localeCompare(left.date))
-      .slice(0, 24),
-    similarArtists: sortedSimilar,
-    collectionGaps: buildCollectionGaps(inventory, sortedMissing, dedupedNewReleases, wishlist),
+      .slice(0, 12),
+    similarArtists,
+    similarSongs,
+    artistTopTracks,
+    starredSongs: starredSongs.slice(0, 12),
+    collectionGaps: buildCollectionGaps(inventory, similarSongs, similarArtists, wishlist),
     notes
   };
 }

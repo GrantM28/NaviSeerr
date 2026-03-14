@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 
-import type { AppConfig, LibraryAlbum } from "@/lib/types";
+import type { AppConfig, LibraryAlbum, LibraryTrack } from "@/lib/types";
 
 type SubsonicResponse<T> = {
   "subsonic-response": {
@@ -137,5 +137,29 @@ export class NavidromeClient {
     });
 
     return (payload.artistInfo2?.similarArtist || []).map((entry) => entry.name);
+  }
+
+  async fetchStarredSongs(): Promise<LibraryTrack[]> {
+    const payload = await this.request<{
+      starred2?: {
+        song?: Array<{
+          id: string;
+          title: string;
+          artist: string;
+          artistId?: string;
+          album?: string;
+          starred?: string;
+        }>;
+      };
+    }>("getStarred2", {});
+
+    return (payload.starred2?.song || []).map((song) => ({
+      id: song.id,
+      title: song.title,
+      artist: song.artist,
+      artistId: song.artistId,
+      album: song.album,
+      starred: song.starred
+    }));
   }
 }

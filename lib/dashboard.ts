@@ -8,13 +8,20 @@ import {
   upsertArtistCacheEntry
 } from "@/lib/artist-cache-store";
 import { hasNavidromeConfig, loadConfig, toDisplayConfig } from "@/lib/config-store";
-import { fetchSimilarArtists } from "@/lib/lastfm";
+import { fetchArtistTopTracks, fetchSimilarArtists, fetchSimilarTracks } from "@/lib/lastfm";
 import { fetchArtistCatalog } from "@/lib/musicbrainz";
 import { NavidromeClient } from "@/lib/navidrome";
 import { loadReport, saveReport } from "@/lib/report-store";
 import { dispatchWishlistItem } from "@/lib/request-target";
 import { loadScanState, saveScanState } from "@/lib/scan-state-store";
-import type { ArtistMetadataCacheEntry, ScanState, StoredState, WishlistItem } from "@/lib/types";
+import type {
+  ArtistMetadataCacheEntry,
+  LibraryTrack,
+  RecommendedSongItem,
+  ScanState,
+  StoredState,
+  WishlistItem
+} from "@/lib/types";
 import { loadWishlist, saveWishlist } from "@/lib/wishlist-store";
 
 let activeScan: Promise<void> | null = null;
@@ -49,6 +56,7 @@ async function fetchArtistMetadata(params: {
   const { navidrome, artistName, artistId, lastfmApiKey } = params;
   const catalog = await fetchArtistCatalog(artistName);
   let similarArtists: ArtistMetadataCacheEntry["similarArtists"] = [];
+  let topTracks: ArtistMetadataCacheEntry["topTracks"] = [];
 
   try {
     const navidromeSimilar = artistId ? await navidrome.similarArtists(artistId, 6) : [];
@@ -72,12 +80,62 @@ async function fetchArtistMetadata(params: {
     }
   }
 
+  if (lastfmApiKey) {
+    try {
+      const tracks = await fetchArtistTopTracks(artistName, lastfmApiKey, 4);
+      topTracks = tracks.map((track) => ({
+        title: track.title,
+        artist: track.artist,
+        playcount: track.playcount,
+        listeners: track.listeners
+      }));
+    } catch {
+      topTracks = [];
+    }
+  }
+
   return {
     artistName,
     fetchedAt: new Date().toISOString(),
     catalog,
-    similarArtists
+    similarArtists,
+    topTracks
   };
+}
+
+async function buildSimilarSongSeeds(params: {
+  apiKey?: string;
+  starredSongs: LibraryTrack[];
+}): Promise<RecommendedSongItem[]> {
+  const { apiKey, starredSongs } = params;
+
+  if (!apiKey) {
+    return [];
+  }
+
+  const recommendations: RecommendedSongItem[] = [];
+
+  for (const seed of starredSongs.slice(0, 8)) {
+    try {
+      const similar = await fetchSimilarTracks(seed.artist, seed.title, apiKey, 5);
+
+      for (const item of similar) {
+        recommendations.push({
+          seedTitle: seed.title,
+          seedArtist: seed.artist,
+          title: item.title,
+          artist: item.artist,
+          matchScore: item.matchScore,
+          source: "lastfm",
+          reason: `Because you starred ${seed.title} by ${seed.artist}.`
+        });
+      }
+    } catch {
+      // Skip seeds that fail without interrupting the full scan.
+    }
+  }
+
+  return recommendations;
 }
 
 async function performScan(): Promise<void> {
@@ -100,8 +158,13 @@ async function performScan(): Promise<void> {
 
   await navidrome.ping();
   const albums = await navidrome.fetchAllAlbums();
+  const starredSongs = await navidrome.fetchStarredSongs().catch(() => []);
   const inventory = buildInventory(albums);
   let cache = await loadArtistCache();
+  const initialSimilarSongSeeds = await buildSimilarSongSeeds({
+    apiKey: config.integrations.lastfmApiKey,
+    starredSongs
+  });
 
   await saveScanState({
     isScanning: true,
@@ -117,7 +180,9 @@ async function performScan(): Promise<void> {
     inventory,
     cache,
     wishlist,
-    recentReleaseWindowDays: config.preferences.recentReleaseWindowDays
+    recentReleaseWindowDays: config.preferences.recentReleaseWindowDays,
+    starredSongs,
+    similarSongSeeds: initialSimilarSongSeeds
   });
   await saveReport(initialReport);
 
@@ -157,7 +222,9 @@ async function performScan(): Promise<void> {
         inventory,
         cache,
         wishlist,
-        recentReleaseWindowDays: config.preferences.recentReleaseWindowDays
+        recentReleaseWindowDays: config.preferences.recentReleaseWindowDays,
+        starredSongs,
+        similarSongSeeds: initialSimilarSongSeeds
       });
       await saveReport(partialReport);
     }
@@ -177,7 +244,9 @@ async function performScan(): Promise<void> {
     inventory,
     cache,
     wishlist,
-    recentReleaseWindowDays: config.preferences.recentReleaseWindowDays
+    recentReleaseWindowDays: config.preferences.recentReleaseWindowDays,
+    starredSongs,
+    similarSongSeeds: initialSimilarSongSeeds
   });
   await saveReport(finalReport);
 

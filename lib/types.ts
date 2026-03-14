@@ -43,6 +43,15 @@ export type LibraryAlbum = {
   songCount?: number;
 };
 
+export type LibraryTrack = {
+  id: string;
+  title: string;
+  artist: string;
+  artistId?: string;
+  album?: string;
+  starred?: string;
+};
+
 export type LibraryArtist = {
   id: string;
   name: string;
@@ -85,6 +94,24 @@ export type SimilarArtistItem = {
   reason: string;
 };
 
+export type RecommendedSongItem = {
+  seedTitle?: string;
+  seedArtist?: string;
+  title: string;
+  artist: string;
+  matchScore?: number;
+  source: "lastfm";
+  reason: string;
+};
+
+export type ArtistTopTrackItem = {
+  artist: string;
+  title: string;
+  playcount?: number;
+  listeners?: number;
+  source: "lastfm";
+};
+
 export type NewReleaseItem = {
   artist: string;
   title: string;
@@ -118,6 +145,9 @@ export type ScanReport = {
   missingDiscography: MissingDiscographyItem[];
   newReleases: NewReleaseItem[];
   similarArtists: SimilarArtistItem[];
+  similarSongs: RecommendedSongItem[];
+  artistTopTracks: ArtistTopTrackItem[];
+  starredSongs: LibraryTrack[];
   collectionGaps: CollectionGap[];
   notes: string[];
 };
@@ -127,11 +157,19 @@ export type SimilarArtistCacheItem = {
   source: "navidrome" | "lastfm";
 };
 
+export type ArtistTopTrackCacheItem = {
+  title: string;
+  artist: string;
+  playcount?: number;
+  listeners?: number;
+};
+
 export type ArtistMetadataCacheEntry = {
   artistName: string;
   fetchedAt: string;
   catalog: CatalogRelease[];
   similarArtists: SimilarArtistCacheItem[];
+  topTracks: ArtistTopTrackCacheItem[];
 };
 
 export type ArtistMetadataCache = Record<string, ArtistMetadataCacheEntry>;

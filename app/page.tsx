@@ -1,6 +1,7 @@
 import { AutoScanBanner } from "@/components/auto-scan-banner";
 import { ScanButton } from "@/components/scan-button";
 import { SettingsForm } from "@/components/settings-form";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { WishlistActionButton } from "@/components/wishlist-action-button";
 import { WishlistControls } from "@/components/wishlist-controls";
 import { loadAppState } from "@/lib/dashboard";
@@ -21,11 +22,12 @@ function formatDate(value: string): string {
 function EmptyReport() {
   return (
     <section className="panel hero-card">
-      <div className="eyebrow">Collection intelligence for Navidrome</div>
-      <h1>NaviSeerr turns your library into a browseable backlog.</h1>
+      <div className="eyebrow">Song-first discovery</div>
+      <h1>NaviSeerr should feel like “what do I play next?” instead of “what album am I missing?”</h1>
       <p className="lede">
-        Connect Navidrome once, then NaviSeerr keeps scanning the full library in the background so
-        your rows stay current with missing releases, recent drops, and artists worth queuing next.
+        Save your Navidrome connection, star a few favorite tracks, add a Last.fm API key, and the
+        home screen will fill with similar songs, top tracks from artists you already love, and new
+        artists worth queuing.
       </p>
     </section>
   );
@@ -43,11 +45,13 @@ export default async function Home() {
           <div className="eyebrow">Self-hosted music companion</div>
           <h1 className="site-title">NaviSeerr</h1>
           <p className="lede compact">
-            Jellyseerr-style browsing for your Navidrome collection, with whole-library sync and a
-            wanted queue.
+            Recommendations for what to hear next, built from your Navidrome taste profile.
           </p>
         </div>
-        <ScanButton disabled={!state.hasConfig} />
+        <div className="topbar-actions">
+          <ThemeToggle />
+          <ScanButton disabled={!state.hasConfig} />
+        </div>
       </section>
 
       <div className="page-stack">
@@ -56,7 +60,7 @@ export default async function Home() {
         <section className="hero-layout">
           <article className="panel hero-card">
             <div className="eyebrow">Overview</div>
-            <h2 className="section-title">Your next listens, pickups, and gaps at a glance.</h2>
+            <h2 className="section-title">A better queue for your next listen.</h2>
             <div className="stats-grid wide">
               <article className="stat-card">
                 <span>Artists</span>
@@ -67,8 +71,8 @@ export default async function Home() {
                 <strong>{report?.stats.totalAlbums ?? 0}</strong>
               </article>
               <article className="stat-card">
-                <span>Metadata coverage</span>
-                <strong>{report?.stats.catalogCoverageArtists ?? 0}</strong>
+                <span>Song recs</span>
+                <strong>{report?.similarSongs.length ?? 0}</strong>
               </article>
               <article className="stat-card">
                 <span>Wishlist</span>
@@ -77,8 +81,8 @@ export default async function Home() {
             </div>
             {report ? (
               <p className="lede compact">
-                Last report generated {formatDate(report.generatedAt)}. Auto refresh runs every{" "}
-                {state.config?.preferences.autoRefreshHours || 12} hours.
+                Last report generated {formatDate(report.generatedAt)}. Starred songs in Navidrome
+                are used as your first taste seeds.
               </p>
             ) : null}
           </article>
@@ -101,82 +105,35 @@ export default async function Home() {
             <section className="row-section">
               <div className="row-header">
                 <div>
-                  <div className="eyebrow">Missing discography</div>
-                  <h2 className="section-title small">Complete your artists</h2>
+                  <div className="eyebrow">Taste seeds</div>
+                  <h2 className="section-title small">Starred songs from your library</h2>
                 </div>
-                <p>{report.stats.missingReleases} missing releases surfaced across the library.</p>
+                <p>{report.starredSongs.length} starred tracks found in Navidrome</p>
               </div>
               <div className="carousel-row">
-                {report.missingDiscography.length ? (
-                  report.missingDiscography.map((item) => (
-                    <article className="carousel-card large" key={item.artist}>
-                      <div className="card-kicker">{item.artist}</div>
-                      <h3>
-                        {item.ownedCount} of {item.knownCount} release groups owned
-                      </h3>
-                      <div className="mini-stack">
-                        {item.missing.map((release) => (
-                          <div className="release-pill" key={`${item.artist}-${release.id}`}>
-                            <div>
-                              <strong>{release.title}</strong>
-                              <span>
-                                {release.type}
-                                {release.year ? ` • ${release.year}` : ""}
-                              </span>
-                            </div>
-                            <WishlistActionButton
-                              artist={item.artist}
-                              title={release.title}
-                              type="album"
-                              reason={`Missing ${release.type.toLowerCase()} from ${item.artist}`}
-                              source="missing-discography"
-                              label="Want"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </article>
-                  ))
-                ) : (
-                  <article className="carousel-card">
-                    <h3>No missing releases detected</h3>
-                    <p>Once metadata coverage grows, this row will fill itself in automatically.</p>
-                  </article>
-                )}
-              </div>
-            </section>
-
-            <section className="row-section">
-              <div className="row-header">
-                <div>
-                  <div className="eyebrow">New releases</div>
-                  <h2 className="section-title small">Fresh drops from artists you own</h2>
-                </div>
-                <p>{state.config?.preferences.recentReleaseWindowDays || 45}-day window</p>
-              </div>
-              <div className="carousel-row">
-                {report.newReleases.length ? (
-                  report.newReleases.map((release) => (
-                    <article className="carousel-card" key={`${release.artist}-${release.title}`}>
-                      <div className="card-kicker">{release.artist}</div>
-                      <h3>{release.title}</h3>
-                      <p>
-                        {release.type} • {formatDate(release.date)}
-                      </p>
+                {report.starredSongs.length ? (
+                  report.starredSongs.map((track) => (
+                    <article className="carousel-card" key={track.id}>
+                      <div className="card-kicker">{track.artist}</div>
+                      <h3>{track.title}</h3>
+                      <p>{track.album || "Starred track seed"}</p>
                       <WishlistActionButton
-                        artist={release.artist}
-                        title={release.title}
+                        artist={track.artist}
+                        title={track.title}
                         type="album"
-                        reason={`Recent release from ${release.artist}`}
-                        source="new-releases"
-                        label="Save"
+                        reason={`Seed track from ${track.artist}`}
+                        source="starred-song"
+                        label="Save artist"
                       />
                     </article>
                   ))
                 ) : (
-                  <article className="carousel-card">
-                    <h3>No recent gaps right now</h3>
-                    <p>This row fills with new releases from artists already in the library.</p>
+                  <article className="carousel-card featured">
+                    <h3>No starred songs yet</h3>
+                    <p>
+                      Star a few tracks in Navidrome and this row becomes the engine for similar-song
+                      recommendations.
+                    </p>
                   </article>
                 )}
               </div>
@@ -185,10 +142,83 @@ export default async function Home() {
             <section className="row-section">
               <div className="row-header">
                 <div>
-                  <div className="eyebrow">Similar artists</div>
-                  <h2 className="section-title small">Because you already listen to...</h2>
+                  <div className="eyebrow">Similar songs</div>
+                  <h2 className="section-title small">Because you loved those tracks</h2>
                 </div>
-                <p>Navidrome first, Last.fm fallback if configured.</p>
+                <p>Last.fm track similarity seeded from your starred songs</p>
+              </div>
+              <div className="carousel-row">
+                {report.similarSongs.length ? (
+                  report.similarSongs.map((song) => (
+                    <article className="carousel-card" key={`${song.artist}-${song.title}`}>
+                      <div className="card-kicker">{song.seedArtist ? `${song.seedArtist} seed` : "Recommended track"}</div>
+                      <h3>{song.title}</h3>
+                      <p>
+                        {song.artist}
+                        {song.seedTitle ? ` • from ${song.seedTitle}` : ""}
+                      </p>
+                      <WishlistActionButton
+                        artist={song.artist}
+                        title={song.title}
+                        type="artist"
+                        reason={song.reason}
+                        source="similar-songs"
+                        label="Queue artist"
+                      />
+                    </article>
+                  ))
+                ) : (
+                  <article className="carousel-card featured">
+                    <h3>Similar-song row is waiting on seeds</h3>
+                    <p>Add a Last.fm API key and star a few songs in Navidrome to unlock this row.</p>
+                  </article>
+                )}
+              </div>
+            </section>
+
+            <section className="row-section">
+              <div className="row-header">
+                <div>
+                  <div className="eyebrow">Artist highlights</div>
+                  <h2 className="section-title small">Top tracks from artists you already collect</h2>
+                </div>
+                <p>Great when you want deeper cuts without leaving your lane</p>
+              </div>
+              <div className="carousel-row">
+                {report.artistTopTracks.length ? (
+                  report.artistTopTracks.map((track) => (
+                    <article className="carousel-card" key={`${track.artist}-${track.title}`}>
+                      <div className="card-kicker">{track.artist}</div>
+                      <h3>{track.title}</h3>
+                      <p>
+                        {track.playcount ? `${track.playcount.toLocaleString()} plays` : "Top listener favorite"}
+                      </p>
+                      <WishlistActionButton
+                        artist={track.artist}
+                        title={track.title}
+                        type="artist"
+                        reason={`Top track spotlight from ${track.artist}`}
+                        source="artist-top-tracks"
+                        label="Queue artist"
+                      />
+                    </article>
+                  ))
+                ) : (
+                  <article className="carousel-card featured">
+                    <h3>No top-track data yet</h3>
+                    <p>Last.fm artist top tracks will fill this row once the integration is configured.</p>
+                  </article>
+                )}
+              </div>
+            </section>
+
+            <section className="row-section">
+              <div className="row-header">
+                <div>
+                  <div className="eyebrow">New artists</div>
+                  <h2 className="section-title small">Adjacent artists worth trying</h2>
+                </div>
+                <p>Based on your existing artists and external similarity data</p>
               </div>
               <div className="carousel-row">
                 {report.similarArtists.length ? (
@@ -208,9 +238,9 @@ export default async function Home() {
                     </article>
                   ))
                 ) : (
-                  <article className="carousel-card">
-                    <h3>No recommendations yet</h3>
-                    <p>Add a Last.fm key if Navidrome isn’t returning enough similarity data.</p>
+                  <article className="carousel-card featured">
+                    <h3>No artist suggestions yet</h3>
+                    <p>Once metadata coverage grows, this row fills with adjacent artists you do not already own.</p>
                   </article>
                 )}
               </div>
@@ -219,26 +249,8 @@ export default async function Home() {
             <section className="row-section">
               <div className="row-header">
                 <div>
-                  <div className="eyebrow">Library health</div>
-                  <h2 className="section-title small">Smart collection gaps</h2>
-                </div>
-              </div>
-              <div className="carousel-row">
-                {report.collectionGaps.map((gap) => (
-                  <article className="carousel-card" key={gap.title}>
-                    <div className="card-kicker">Gap</div>
-                    <h3>{gap.title}</h3>
-                    <p>{gap.detail}</p>
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="row-section">
-              <div className="row-header">
-                <div>
                   <div className="eyebrow">Wanted queue</div>
-                  <h2 className="section-title small">Saved for import</h2>
+                  <h2 className="section-title small">Saved for later</h2>
                 </div>
                 <p>{state.wishlist.length} queued items</p>
               </div>
@@ -261,9 +273,9 @@ export default async function Home() {
                     </article>
                   ))
                 ) : (
-                  <article className="carousel-card">
-                    <h3>Your wishlist is empty</h3>
-                    <p>Save albums or artists from any row and they’ll show up here.</p>
+                  <article className="carousel-card featured">
+                    <h3>Your queue is empty</h3>
+                    <p>Use the recommendation rows to build a wanted queue instead of a mental note pile.</p>
                   </article>
                 )}
               </div>
@@ -272,12 +284,12 @@ export default async function Home() {
             <section className="row-section">
               <div className="row-header">
                 <div>
-                  <div className="eyebrow">Top of collection</div>
-                  <h2 className="section-title small">Genres and heavy hitters</h2>
+                  <div className="eyebrow">Context</div>
+                  <h2 className="section-title small">Collection profile</h2>
                 </div>
               </div>
               <div className="carousel-row">
-                <article className="carousel-card">
+                <article className="carousel-card featured">
                   <div className="card-kicker">Genres</div>
                   <div className="chip-cloud">
                     {report.overview.topGenres.map((genre) => (
@@ -287,7 +299,7 @@ export default async function Home() {
                     ))}
                   </div>
                 </article>
-                <article className="carousel-card large" key="top-artists">
+                <article className="carousel-card featured">
                   <div className="card-kicker">Top artists</div>
                   <div className="mini-stack">
                     {report.overview.topArtists.map((artist) => (
@@ -298,11 +310,27 @@ export default async function Home() {
                     ))}
                   </div>
                 </article>
-                <article className="carousel-card large" key="notes">
-                  <div className="card-kicker">Notes</div>
+                <article className="carousel-card featured">
+                  <div className="card-kicker">Library health</div>
                   <div className="mini-stack">
-                    {report.notes.map((note) => (
-                      <p key={note}>{note}</p>
+                    {report.collectionGaps.map((gap) => (
+                      <p key={gap.title}>
+                        <strong>{gap.title}</strong>
+                        <br />
+                        {gap.detail}
+                      </p>
+                    ))}
+                  </div>
+                </article>
+                <article className="carousel-card featured">
+                  <div className="card-kicker">Fresh releases</div>
+                  <div className="mini-stack">
+                    {report.newReleases.slice(0, 5).map((release) => (
+                      <p key={`${release.artist}-${release.title}`}>
+                        <strong>{release.title}</strong>
+                        <br />
+                        {release.artist} • {formatDate(release.date)}
+                      </p>
                     ))}
                   </div>
                 </article>
