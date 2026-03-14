@@ -161,8 +161,9 @@ async function performScan(): Promise<void> {
 
   await navidrome.ping();
   const albums = await navidrome.fetchAllAlbums();
+  const tracks = await navidrome.fetchAllTracks(albums.map((album) => album.id));
   const starredSongs = await navidrome.fetchStarredSongs().catch(() => []);
-  const inventory = buildInventory(albums);
+  const inventory = buildInventory(albums, tracks);
   let cache = await loadArtistCache();
   const initialSimilarSongSeeds = await buildSimilarSongSeeds({
     apiKey: config.integrations.lastfmApiKey,

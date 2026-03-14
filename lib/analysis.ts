@@ -34,7 +34,7 @@ function genreCounts(albums: LibraryAlbum[]) {
     .map(([name, count]) => ({ name, count }));
 }
 
-export function buildInventory(albums: LibraryAlbum[]): LibraryInventory {
+export function buildInventory(albums: LibraryAlbum[], tracks: LibraryTrack[] = []): LibraryInventory {
   const artistMap = new Map<string, LibraryArtist>();
 
   for (const album of albums) {
@@ -64,6 +64,7 @@ export function buildInventory(albums: LibraryAlbum[]): LibraryInventory {
   return {
     artists,
     albums,
+    tracks,
     genres: genreCounts(albums)
   };
 }
@@ -203,13 +204,18 @@ function buildArtistTopTracks(
 }
 
 function buildSimilarSongs(
+  inventory: LibraryInventory,
   starredSongs: LibraryTrack[],
   similarSongSeeds: RecommendedSongItem[]
 ): RecommendedSongItem[] {
   const seeds = starredSongs.slice(0, 8);
   const deduped: RecommendedSongItem[] = [];
+  const ownedTrackKeys = new Set(
+    inventory.tracks.map((track) => `${normalizeText(track.artist)}::${normalizeText(track.title)}`)
+  );
 
   for (const item of similarSongSeeds) {
+    const itemKey = `${normalizeText(item.artist)}::${normalizeText(item.title)}`;
     const duplicate = deduped.some(
       (existing) =>
         sameArtist(existing.artist, item.artist) && normalizeText(existing.title) === normalizeText(item.title)
@@ -219,7 +225,7 @@ function buildSimilarSongs(
       (seed) => sameArtist(seed.artist, item.artist) && normalizeText(seed.title) === normalizeText(item.title)
     );
 
-    if (!duplicate && !isAlreadyStarred) {
+    if (!duplicate && !isAlreadyStarred && !ownedTrackKeys.has(itemKey)) {
       deduped.push(item);
     }
   }
@@ -288,7 +294,7 @@ export function buildScanReport(params: {
 
   const similarArtists = buildSimilarArtists(inventory, cache);
   const artistTopTracks = buildArtistTopTracks(inventory, cache);
-  const similarSongs = buildSimilarSongs(starredSongs, similarSongSeeds);
+  const similarSongs = buildSimilarSongs(inventory, starredSongs, similarSongSeeds);
 
   const notes = [
     `Scanned the full Navidrome library: ${inventory.artists.length} artists and ${inventory.albums.length} albums.`,

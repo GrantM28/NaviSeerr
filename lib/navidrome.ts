@@ -128,6 +128,48 @@ export class NavidromeClient {
     return albums;
   }
 
+  async fetchAllTracks(albumIds?: string[]): Promise<LibraryTrack[]> {
+    const albums = albumIds?.length
+      ? albumIds.map((id) => ({ id }))
+      : (await this.fetchAllAlbums()).map((album) => ({ id: album.id }));
+    const tracks: LibraryTrack[] = [];
+
+    for (const album of albums) {
+      const payload = await this.request<{
+        album?: {
+          song?: Array<{
+            id: string;
+            title: string;
+            artist: string;
+            artistId?: string;
+            album?: string;
+            albumId?: string;
+            parent?: string;
+            coverArt?: string;
+            starred?: string;
+          }>;
+        };
+      }>("getAlbum", {
+        id: album.id
+      });
+
+      for (const song of payload.album?.song || []) {
+        tracks.push({
+          id: song.id,
+          title: song.title,
+          artist: song.artist,
+          artistId: song.artistId,
+          album: song.album,
+          albumId: song.albumId || song.parent || album.id,
+          starred: song.starred,
+          coverArtId: song.coverArt || song.albumId || song.parent || album.id || song.id
+        });
+      }
+    }
+
+    return tracks;
+  }
+
   async similarArtists(artistId: string, count = 5): Promise<string[]> {
     const payload = await this.request<{
       artistInfo2?: {

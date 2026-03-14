@@ -70,6 +70,7 @@ export type GenreCount = {
 export type LibraryInventory = {
   artists: LibraryArtist[];
   albums: LibraryAlbum[];
+  tracks: LibraryTrack[];
   genres: GenreCount[];
 };
 
