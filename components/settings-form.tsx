@@ -1,0 +1,151 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import type { FormEvent } from "react";
+import { useState, useTransition } from "react";
+
+import type { DisplayConfig } from "@/lib/types";
+
+export function SettingsForm({ config }: { config: DisplayConfig | null }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [status, setStatus] = useState("");
+  const [baseUrl, setBaseUrl] = useState(config?.navidrome.baseUrl || "");
+  const [username, setUsername] = useState(config?.navidrome.username || "");
+  const [password, setPassword] = useState("");
+  const [lastfmApiKey, setLastfmApiKey] = useState("");
+  const [requestWebhookUrl, setRequestWebhookUrl] = useState(config?.integrations.requestWebhookUrl || "");
+  const [artistScanLimit, setArtistScanLimit] = useState(String(config?.preferences.artistScanLimit || 12));
+  const [recentReleaseWindowDays, setRecentReleaseWindowDays] = useState(
+    String(config?.preferences.recentReleaseWindowDays || 45)
+  );
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus("");
+
+    startTransition(async () => {
+      const response = await fetch("/api/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          baseUrl,
+          username,
+          password,
+          lastfmApiKey,
+          requestWebhookUrl,
+          artistScanLimit: Number(artistScanLimit),
+          recentReleaseWindowDays: Number(recentReleaseWindowDays)
+        })
+      });
+
+      const payload = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setStatus(payload.error || "Could not save settings.");
+        return;
+      }
+
+      setPassword("");
+      setLastfmApiKey("");
+      setStatus("Settings saved.");
+      router.refresh();
+    });
+  }
+
+  return (
+    <form className="form-grid" onSubmit={onSubmit}>
+      <label className="field">
+        <span>Navidrome URL</span>
+        <input
+          name="baseUrl"
+          onChange={(event) => setBaseUrl(event.target.value)}
+          placeholder="http://navidrome:4533"
+          required
+          value={baseUrl}
+        />
+      </label>
+
+      <div className="form-grid two-up">
+        <label className="field">
+          <span>Username</span>
+          <input
+            name="username"
+            onChange={(event) => setUsername(event.target.value)}
+            placeholder="admin"
+            required
+            value={username}
+          />
+        </label>
+
+        <label className="field">
+          <span>Password</span>
+          <input
+            name="password"
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder={config?.navidrome.hasPassword ? "Saved on server" : "App password"}
+            type="password"
+            value={password}
+          />
+        </label>
+      </div>
+
+      <div className="form-grid two-up">
+        <label className="field">
+          <span>Last.fm API key</span>
+          <input
+            name="lastfmApiKey"
+            onChange={(event) => setLastfmApiKey(event.target.value)}
+            placeholder={config?.integrations.hasLastfmApiKey ? "Saved on server" : "Optional"}
+            value={lastfmApiKey}
+          />
+        </label>
+
+        <label className="field">
+          <span>Request webhook URL</span>
+          <input
+            name="requestWebhookUrl"
+            onChange={(event) => setRequestWebhookUrl(event.target.value)}
+            placeholder="Optional custom downloader endpoint"
+            value={requestWebhookUrl}
+          />
+        </label>
+      </div>
+
+      <div className="form-grid two-up">
+        <label className="field">
+          <span>Artist scan limit</span>
+          <input
+            max={30}
+            min={3}
+            name="artistScanLimit"
+            onChange={(event) => setArtistScanLimit(event.target.value)}
+            type="number"
+            value={artistScanLimit}
+          />
+        </label>
+
+        <label className="field">
+          <span>Recent release window (days)</span>
+          <input
+            max={180}
+            min={7}
+            name="recentReleaseWindowDays"
+            onChange={(event) => setRecentReleaseWindowDays(event.target.value)}
+            type="number"
+            value={recentReleaseWindowDays}
+          />
+        </label>
+      </div>
+
+      <div className="actions-row">
+        <button className="button" disabled={pending} type="submit">
+          {pending ? "Saving..." : "Save settings"}
+        </button>
+      </div>
+      <p className="status-line">{status}</p>
+    </form>
+  );
+}
