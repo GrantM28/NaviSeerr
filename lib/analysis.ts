@@ -162,7 +162,8 @@ function buildSimilarArtists(
           reason:
             candidate.source === "navidrome"
               ? `If you like ${artist.name}, Navidrome points toward ${candidate.name}.`
-              : `Last.fm listeners who play ${artist.name} also drift toward ${candidate.name}.`
+              : `Last.fm listeners who play ${artist.name} also drift toward ${candidate.name}.`,
+          artUrl: candidate.artUrl
         });
       }
     }
@@ -191,7 +192,8 @@ function buildArtistTopTracks(
           title: track.title,
           playcount: track.playcount,
           listeners: track.listeners,
-          source: "lastfm"
+          source: "lastfm",
+          artUrl: track.artUrl
         });
       }
     }

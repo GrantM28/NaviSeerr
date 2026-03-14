@@ -1,4 +1,5 @@
 import { AutoScanBanner } from "@/components/auto-scan-banner";
+import { CardArt } from "@/components/card-art";
 import { ScanButton } from "@/components/scan-button";
 import { SettingsForm } from "@/components/settings-form";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -114,6 +115,10 @@ export default async function Home() {
                 {report.starredSongs.length ? (
                   report.starredSongs.map((track) => (
                     <article className="carousel-card" key={track.id}>
+                      <CardArt
+                        alt={`${track.title} cover art`}
+                        src={track.coverArtId ? `/api/art?id=${encodeURIComponent(track.coverArtId)}` : undefined}
+                      />
                       <div className="card-kicker">{track.artist}</div>
                       <h3>{track.title}</h3>
                       <p>{track.album || "Starred track seed"}</p>
@@ -151,6 +156,7 @@ export default async function Home() {
                 {report.similarSongs.length ? (
                   report.similarSongs.map((song) => (
                     <article className="carousel-card" key={`${song.artist}-${song.title}`}>
+                      <CardArt alt={`${song.title} artwork`} src={song.artUrl} />
                       <div className="card-kicker">{song.seedArtist ? `${song.seedArtist} seed` : "Recommended track"}</div>
                       <h3>{song.title}</h3>
                       <p>
@@ -188,6 +194,7 @@ export default async function Home() {
                 {report.artistTopTracks.length ? (
                   report.artistTopTracks.map((track) => (
                     <article className="carousel-card" key={`${track.artist}-${track.title}`}>
+                      <CardArt alt={`${track.title} artwork`} src={track.artUrl} />
                       <div className="card-kicker">{track.artist}</div>
                       <h3>{track.title}</h3>
                       <p>
@@ -224,6 +231,7 @@ export default async function Home() {
                 {report.similarArtists.length ? (
                   report.similarArtists.map((item) => (
                     <article className="carousel-card" key={`${item.seedArtist}-${item.artist}`}>
+                      <CardArt alt={`${item.artist} artwork`} src={item.artUrl} />
                       <div className="card-kicker">{item.seedArtist}</div>
                       <h3>{item.artist}</h3>
                       <p>{item.reason}</p>
@@ -258,6 +266,7 @@ export default async function Home() {
                 {state.wishlist.length ? (
                   state.wishlist.map((item) => (
                     <article className="carousel-card" key={item.id}>
+                      <CardArt alt={`${item.title} placeholder art`} />
                       <div className="card-kicker">{item.artist}</div>
                       <h3>{item.title}</h3>
                       <p>{item.reason}</p>
@@ -290,6 +299,7 @@ export default async function Home() {
               </div>
               <div className="carousel-row">
                 <article className="carousel-card featured">
+                  <CardArt alt="Genre collage placeholder" />
                   <div className="card-kicker">Genres</div>
                   <div className="chip-cloud">
                     {report.overview.topGenres.map((genre) => (
@@ -300,6 +310,7 @@ export default async function Home() {
                   </div>
                 </article>
                 <article className="carousel-card featured">
+                  <CardArt alt="Top artists placeholder" />
                   <div className="card-kicker">Top artists</div>
                   <div className="mini-stack">
                     {report.overview.topArtists.map((artist) => (
@@ -311,6 +322,7 @@ export default async function Home() {
                   </div>
                 </article>
                 <article className="carousel-card featured">
+                  <CardArt alt="Library health placeholder" />
                   <div className="card-kicker">Library health</div>
                   <div className="mini-stack">
                     {report.collectionGaps.map((gap) => (
@@ -323,6 +335,7 @@ export default async function Home() {
                   </div>
                 </article>
                 <article className="carousel-card featured">
+                  <CardArt alt="Fresh releases placeholder" />
                   <div className="card-kicker">Fresh releases</div>
                   <div className="mini-stack">
                     {report.newReleases.slice(0, 5).map((release) => (

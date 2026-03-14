@@ -2,6 +2,10 @@ import { sameArtist } from "@/lib/normalize";
 
 type LastFmSimilarArtist = {
   name: string;
+  image?: Array<{
+    "#text": string;
+    size: string;
+  }>;
 };
 
 type LastFmTrack = {
@@ -12,6 +16,10 @@ type LastFmTrack = {
   match?: string;
   playcount?: string;
   listeners?: string;
+  image?: Array<{
+    "#text": string;
+    size: string;
+  }>;
 };
 
 type LastFmSimilarResponse = {
@@ -51,7 +59,26 @@ function toArray<T>(value: T | T[] | undefined): T[] {
   return Array.isArray(value) ? value : value ? [value] : [];
 }
 
-export async function fetchSimilarArtists(artistName: string, apiKey: string, limit = 5): Promise<string[]> {
+function pickImage(
+  images: Array<{
+    "#text": string;
+    size: string;
+  }> | undefined
+): string | undefined {
+  if (!images?.length) {
+    return undefined;
+  }
+
+  const preferred = images.find((image) => image.size === "extralarge" && image["#text"]);
+  const fallback = [...images].reverse().find((image) => image["#text"]);
+  return preferred?.["#text"] || fallback?.["#text"] || undefined;
+}
+
+export async function fetchSimilarArtists(
+  artistName: string,
+  apiKey: string,
+  limit = 5
+): Promise<Array<{ name: string; artUrl?: string }>> {
   const payload = await request<LastFmSimilarResponse>(
     new URLSearchParams({
       method: "artist.getsimilar",
@@ -63,8 +90,11 @@ export async function fetchSimilarArtists(artistName: string, apiKey: string, li
   );
 
   return toArray(payload.similarartists?.artist)
-    .map((item) => item.name)
-    .filter((name) => !sameArtist(name, artistName));
+    .map((item) => ({
+      name: item.name,
+      artUrl: pickImage(item.image)
+    }))
+    .filter((item) => !sameArtist(item.name, artistName));
 }
 
 export async function fetchSimilarTracks(
@@ -72,7 +102,7 @@ export async function fetchSimilarTracks(
   trackName: string,
   apiKey: string,
   limit = 6
-): Promise<Array<{ title: string; artist: string; matchScore?: number }>> {
+): Promise<Array<{ title: string; artist: string; matchScore?: number; artUrl?: string }>> {
   const payload = await request<LastFmSimilarTracksResponse>(
     new URLSearchParams({
       method: "track.getsimilar",
@@ -88,7 +118,8 @@ export async function fetchSimilarTracks(
   return toArray(payload.similartracks?.track).map((track) => ({
     title: track.name,
     artist: track.artist.name,
-    matchScore: track.match ? Number(track.match) : undefined
+    matchScore: track.match ? Number(track.match) : undefined,
+    artUrl: pickImage(track.image)
   }));
 }
 
@@ -96,7 +127,7 @@ export async function fetchArtistTopTracks(
   artistName: string,
   apiKey: string,
   limit = 5
-): Promise<Array<{ title: string; artist: string; playcount?: number; listeners?: number }>> {
+): Promise<Array<{ title: string; artist: string; playcount?: number; listeners?: number; artUrl?: string }>> {
   const payload = await request<LastFmTopTracksResponse>(
     new URLSearchParams({
       method: "artist.gettoptracks",
@@ -112,6 +143,7 @@ export async function fetchArtistTopTracks(
     title: track.name,
     artist: track.artist.name,
     playcount: track.playcount ? Number(track.playcount) : undefined,
-    listeners: track.listeners ? Number(track.listeners) : undefined
+    listeners: track.listeners ? Number(track.listeners) : undefined,
+    artUrl: pickImage(track.image)
   }));
 }

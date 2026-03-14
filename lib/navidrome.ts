@@ -32,23 +32,7 @@ export class NavidromeClient {
   }
 
   private async request<T>(endpoint: string, params: Record<string, string | number | boolean | undefined>) {
-    const salt = crypto.randomBytes(6).toString("hex");
-    const token = md5(this.password + salt);
-    const query = new URLSearchParams({
-      u: this.username,
-      t: token,
-      s: salt,
-      v: "1.16.1",
-      c: "NaviSeerr",
-      f: "json"
-    });
-
-    for (const [key, value] of Object.entries(params)) {
-      if (value !== undefined && value !== null && value !== "") {
-        query.set(key, String(value));
-      }
-    }
-
+    const query = this.buildQuery(params);
     const url = `${this.baseUrl}/rest/${endpoint}.view?${query.toString()}`;
     const response = await fetch(url, {
       headers: {
@@ -69,6 +53,27 @@ export class NavidromeClient {
     }
 
     return body;
+  }
+
+  private buildQuery(params: Record<string, string | number | boolean | undefined>) {
+    const salt = crypto.randomBytes(6).toString("hex");
+    const token = md5(this.password + salt);
+    const query = new URLSearchParams({
+      u: this.username,
+      t: token,
+      s: salt,
+      v: "1.16.1",
+      c: "NaviSeerr",
+      f: "json"
+    });
+
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== "") {
+        query.set(key, String(value));
+      }
+    }
+
+    return query;
   }
 
   async ping(): Promise<void> {
@@ -149,6 +154,7 @@ export class NavidromeClient {
           artistId?: string;
           album?: string;
           starred?: string;
+          coverArt?: string;
         }>;
       };
     }>("getStarred2", {});
@@ -159,7 +165,21 @@ export class NavidromeClient {
       artist: song.artist,
       artistId: song.artistId,
       album: song.album,
-      starred: song.starred
+      starred: song.starred,
+      coverArtId: song.coverArt || song.id
     }));
+  }
+
+  async fetchCoverArt(id: string): Promise<Response> {
+    const url = `${this.baseUrl}/rest/getCoverArt.view?${this.buildQuery({ id }).toString()}`;
+    const response = await fetch(url, {
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error(`Navidrome cover art request failed with ${response.status}`);
+    }
+
+    return response;
   }
 }

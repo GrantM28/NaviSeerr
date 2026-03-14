@@ -50,6 +50,7 @@ export type LibraryTrack = {
   artistId?: string;
   album?: string;
   starred?: string;
+  coverArtId?: string;
 };
 
 export type LibraryArtist = {
@@ -92,6 +93,7 @@ export type SimilarArtistItem = {
   artist: string;
   source: "navidrome" | "lastfm";
   reason: string;
+  artUrl?: string;
 };
 
 export type RecommendedSongItem = {
@@ -102,6 +104,7 @@ export type RecommendedSongItem = {
   matchScore?: number;
   source: "lastfm";
   reason: string;
+  artUrl?: string;
 };
 
 export type ArtistTopTrackItem = {
@@ -110,6 +113,7 @@ export type ArtistTopTrackItem = {
   playcount?: number;
   listeners?: number;
   source: "lastfm";
+  artUrl?: string;
 };
 
 export type NewReleaseItem = {
@@ -155,6 +159,7 @@ export type ScanReport = {
 export type SimilarArtistCacheItem = {
   name: string;
   source: "navidrome" | "lastfm";
+  artUrl?: string;
 };
 
 export type ArtistTopTrackCacheItem = {
@@ -162,6 +167,7 @@ export type ArtistTopTrackCacheItem = {
   artist: string;
   playcount?: number;
   listeners?: number;
+  artUrl?: string;
 };
 
 export type ArtistMetadataCacheEntry = {

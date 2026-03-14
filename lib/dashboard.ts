@@ -71,9 +71,10 @@ async function fetchArtistMetadata(params: {
   if (!similarArtists.length && lastfmApiKey) {
     try {
       const lastfmSimilar = await fetchSimilarArtists(artistName, lastfmApiKey, 6);
-      similarArtists = lastfmSimilar.map((name) => ({
-        name,
-        source: "lastfm" as const
+      similarArtists = lastfmSimilar.map((item) => ({
+        name: item.name,
+        source: "lastfm" as const,
+        artUrl: item.artUrl
       }));
     } catch {
       similarArtists = [];
@@ -87,7 +88,8 @@ async function fetchArtistMetadata(params: {
         title: track.title,
         artist: track.artist,
         playcount: track.playcount,
-        listeners: track.listeners
+        listeners: track.listeners,
+        artUrl: track.artUrl
       }));
     } catch {
       topTracks = [];
@@ -127,7 +129,8 @@ async function buildSimilarSongSeeds(params: {
           artist: item.artist,
           matchScore: item.matchScore,
           source: "lastfm",
-          reason: `Because you starred ${seed.title} by ${seed.artist}.`
+          reason: `Because you starred ${seed.title} by ${seed.artist}.`,
+          artUrl: item.artUrl
         });
       }
     } catch {
